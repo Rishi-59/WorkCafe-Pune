@@ -1,7 +1,7 @@
 
 import os
 
-from flask import Flask
+from flask import Flask, redirect, url_for, flash, request
 from config import Config
 from app.extensions import db, migrate, login_manager, csrf
 
@@ -42,5 +42,13 @@ def create_app(config_class=Config):
 
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
+
+    @app.errorhandler(413)
+    def request_entity_too_large(error):
+        flash(
+            "The uploaded file is too large. Maximum request size is 5 MB.",
+            "danger",
+        )
+        return redirect(request.referrer or url_for("admin.dashboard"))
 
     return app

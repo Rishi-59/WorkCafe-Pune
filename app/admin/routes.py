@@ -231,7 +231,15 @@ def create_cafe():
                 page_title="Add Cafe",
             )
 
-        image_filename = save_cafe_image(form.image.data)
+        try:
+            image_filename = save_cafe_image(form.image.data)
+        except ValueError as error:
+            flash(str(error), "danger")
+            return render_template(
+                "admin/cafe_form.html",
+                form=form,
+                page_title="Add Cafe",
+            )
 
         cafe = Cafe(
             name=name,
@@ -263,6 +271,7 @@ def create_cafe():
     )
 
 
+
 @admin_bp.route("/cafes/<int:cafe_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_cafe(cafe_id):
@@ -275,25 +284,27 @@ def edit_cafe(cafe_id):
     ).all()
 
     form.area_id.choices = [
-                               (area.id, area.name) for area in areas
-                           ] + [(-1, "+ Add new area...")]
+        (area.id, area.name) for area in areas
+    ] + [(-1, "+ Add new area...")]
 
-    # Fill the form with existing cafe data on the first visit.
+    # Populate fields only on the initial GET request.
     if not form.is_submitted():
         form.name.data = cafe.name
         form.address.data = cafe.address
         form.description.data = cafe.description
         form.area_id.data = cafe.area_id
         form.price_level.data = cafe.price_level or ""
+
         form.wifi_available.data = (
-            "unknown" if cafe.wifi_available is None
-            else "yes" if cafe.wifi_available
-            else "no"
+            "unknown"
+            if cafe.wifi_available is None
+            else "yes" if cafe.wifi_available else "no"
         )
+
         form.power_outlets.data = (
-            "unknown" if cafe.power_outlets is None
-            else "yes" if cafe.power_outlets
-            else "no"
+            "unknown"
+            if cafe.power_outlets is None
+            else "yes" if cafe.power_outlets else "no"
         )
 
     if form.validate_on_submit():
@@ -305,11 +316,11 @@ def edit_cafe(cafe_id):
             return render_template(
                 "admin/cafe_form.html",
                 form=form,
+                cafe=cafe,
                 page_title="Edit Cafe",
             )
 
-        # Allow the cafe to keep its own slug, but reject another
-        # cafe with the same generated slug.
+        # Prevent another cafe from using the same slug.
         existing_cafe = db.session.scalar(
             db.select(Cafe).where(
                 Cafe.slug == slug,
@@ -324,6 +335,7 @@ def edit_cafe(cafe_id):
             return render_template(
                 "admin/cafe_form.html",
                 form=form,
+                cafe=cafe,
                 page_title="Edit Cafe",
             )
 
@@ -338,6 +350,7 @@ def edit_cafe(cafe_id):
                 return render_template(
                     "admin/cafe_form.html",
                     form=form,
+                    cafe=cafe,
                     page_title="Edit Cafe",
                 )
 
@@ -350,6 +363,7 @@ def edit_cafe(cafe_id):
                 return render_template(
                     "admin/cafe_form.html",
                     form=form,
+                    cafe=cafe,
                     page_title="Edit Cafe",
                 )
 
@@ -361,57 +375,106 @@ def edit_cafe(cafe_id):
                 area = Area(name=area_name, slug=area_slug)
                 db.session.add(area)
                 db.session.flush()
+
         else:
             area = db.session.get(Area, form.area_id.data)
 
         if area is None:
+            db.session.rollback()
             form.area_id.errors.append("Select a valid area.")
             return render_template(
                 "admin/cafe_form.html",
                 form=form,
+                cafe=cafe,
                 page_title="Edit Cafe",
             )
 
-        # Update the existing database object.
+        # Save a replacement image before changing the cafe record.
+        old_image_filename = cafe.image_filename
+        new_image_filename = None
+
+        if form.image.data and form.image.data.filename:
+            try:
+                new_image_filename = save_cafe_image(form.image.data)
+            except ValueError as error:
+                db.session.rollback()
+                flash(str(error), "danger")
+
+                return render_template(
+                    "admin/cafe_form.html",
+                    form=form,
+                    cafe=cafe,
+                    page_title="Edit Cafe",
+                )
+
+        # Update the cafe fields.
         cafe.name = name
         cafe.slug = slug
         cafe.address = form.address.data.strip()
         cafe.description = form.description.data.strip()
         cafe.area = area
         cafe.price_level = form.price_level.data or None
+
         cafe.wifi_available = {
             "yes": True,
             "no": False,
             "unknown": None,
         }[form.wifi_available.data]
+
         cafe.power_outlets = {
             "yes": True,
             "no": False,
             "unknown": None,
         }[form.power_outlets.data]
 
-        old_image_filename = cafe.image_filename
-        new_image_filename = None
-
-        if form.image.data and form.image.data.filename:
-            new_image_filename = save_cafe_image(form.image.data)
+        if new_image_filename:
             cafe.image_filename = new_image_filename
 
-        db.session.commit()
+        # Commit the database changes.
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
 
-        # Remove the previous image only after the database update succeeds.
+            # Avoid leaving the newly uploaded image orphaned.
+            if new_image_filename:
+                delete_cafe_image(new_image_filename)
+
+            flash(
+                "Could not update the cafe. Please try again.",
+                "danger",
+            )
+            return render_template(
+                "admin/cafe_form.html",
+                form=form,
+                cafe=cafe,
+                page_title="Edit Cafe",
+            )
+
+        # Delete the old image only after the commit succeeds.
         if new_image_filename and old_image_filename:
-            delete_cafe_image(old_image_filename)
+            try:
+                delete_cafe_image(old_image_filename)
+            except OSError:
+                # The database update succeeded; don't undo it
+                # just because cleanup of the old file failed.
+                current_app.logger.exception(
+                    "Could not delete the previous cafe image."
+                )
 
-
-        flash(f"{cafe.name} was updated successfully.", "success")
+        flash(
+            f"{cafe.name} was updated successfully.",
+            "success",
+        )
         return redirect(url_for("admin.dashboard"))
 
     return render_template(
         "admin/cafe_form.html",
         form=form,
+        cafe=cafe,
         page_title="Edit Cafe",
     )
+
 
 
 @admin_bp.route(

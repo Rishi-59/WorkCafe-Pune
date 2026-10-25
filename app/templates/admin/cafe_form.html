@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}{{ page_title }} | WorkCafe Pune{% endblock %}
@@ -24,74 +23,95 @@
         {{ form.hidden_tag() }}
 
         {% for field in [
-            form.name,
-            form.address,
-            form.area_id
+        form.name,
+        form.address,
+        form.area_id
         ] %}
-            <div class="mb-3">
-                {{ field.label(class="form-label") }}
-                {{ field(class="form-control") }}
+        <div class="mb-3">
+            {{ field.label(class="form-label") }}
+            {{ field(class="form-control") }}
 
-                {% for error in field.errors %}
-                    <div class="text-danger small mt-1">
-                        {{ error }}
-                    </div>
-                {% endfor %}
+            {% for error in field.errors %}
+            <div class="text-danger small mt-1">
+                {{ error }}
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if field.name == "area_id" %}
+        <div class="mb-3">
+            {{ form.new_area_name.label(class="form-label") }}
+
+            {{ form.new_area_name(
+            class="form-control",
+            placeholder="e.g. Aundh"
+            ) }}
+
+            <div class="form-text">
+                Only fill this in when you select
+                "Add new area".
             </div>
 
-            {% if field.name == "area_id" %}
-                <div class="mb-3">
-                    {{ form.new_area_name.label(class="form-label") }}
-
-                    {{ form.new_area_name(
-                        class="form-control",
-                        placeholder="e.g. Aundh"
-                    ) }}
-
-                    <div class="form-text">
-                        Only fill this in when you select
-                        "Add new area".
-                    </div>
-
-                    {% for error in form.new_area_name.errors %}
-                        <div class="text-danger small mt-1">
-                            {{ error }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+            {% for error in form.new_area_name.errors %}
+            <div class="text-danger small mt-1">
+                {{ error }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% endfor %}
 
         {% for field in [
-            form.description,
-            form.price_level,
-            form.wifi_available,
-            form.power_outlets
+        form.description,
+        form.price_level,
+        form.wifi_available,
+        form.power_outlets
         ] %}
-            <div class="mb-3">
-                {{ field.label(class="form-label") }}
+        <div class="mb-3">
+            {{ field.label(class="form-label") }}
 
-                {% if field.type == "TextAreaField" %}
-                    {{ field(class="form-control", rows="5") }}
-                {% else %}
-                    {{ field(class="form-control") }}
-                {% endif %}
+            {% if field.type == "TextAreaField" %}
+            {{ field(class="form-control", rows="5") }}
+            {% else %}
+            {{ field(class="form-control") }}
+            {% endif %}
 
-                {% for error in field.errors %}
-                    <div class="text-danger small mt-1">
-                        {{ error }}
-                    </div>
-                {% endfor %}
+            {% for error in field.errors %}
+            <div class="text-danger small mt-1">
+                {{ error }}
             </div>
+            {% endfor %}
+        </div>
         {% endfor %}
 
         <!-- Cafe image upload -->
+        {% if cafe is defined and cafe.image_filename %}
+        <div class="mb-3">
+            <label class="form-label">Current Image</label>
+
+            <div>
+                <img
+                        src="{{ url_for(
+                    'static',
+                    filename='uploads/' ~ cafe.image_filename
+                ) }}"
+                        alt="{{ cafe.name }}"
+                        class="img-thumbnail"
+                        style="max-width: 500px;"
+                >
+            </div>
+
+            <div class="form-text">
+                Upload a new image only if you want to replace this one.
+            </div>
+        </div>
+        {% endif %}
         <div class="mb-3">
             {{ form.image.label(class="form-label") }}
 
             {{ form.image(
-                class="form-control",
-                accept=".jpg,.jpeg,.png,.webp"
+            class="form-control",
+            accept=".jpg,.jpeg,.png,.webp"
             ) }}
 
             <div class="form-text">
@@ -99,9 +119,9 @@
             </div>
 
             {% for error in form.image.errors %}
-                <div class="text-danger small mt-1">
-                    {{ error }}
-                </div>
+            <div class="text-danger small mt-1">
+                {{ error }}
+            </div>
             {% endfor %}
         </div>
 
