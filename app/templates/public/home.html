@@ -1,17 +1,162 @@
 
 {% extends "base.html" %}
 
-{% block title %}WorkCafe Pune | Find Your Workspace{% endblock %}
+{% block title %}WorkCafe Pune — Find Your Next Work Spot{% endblock %}
 
 {% block content %}
-    <h1 class="display-4 fw-bold">WorkCafe Pune</h1>
 
-    <p class="lead">
-        Discover cafes across Pune where you can work, study,
-        and enjoy a good cup of coffee.
-    </p>
+<!-- Hero -->
+<section class="py-5 py-lg-6">
+    <div class="container py-4">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <span class="badge text-bg-light border mb-3">
+                    YOUR PUNE CAFE GUIDE
+                </span>
 
-    <p class="text-secondary">
-        Your next workspace is waiting.
-    </p>
+                <h1 class="display-3 fw-bold mb-4">
+                    Find your next
+                    <span class="text-success">work spot.</span>
+                </h1>
+
+                <p class="lead text-secondary mb-4">
+                    Discover cafes around Pune for focused work,
+                    study sessions, and a good cup of coffee.
+                    Find your next favourite spot.
+                </p>
+
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="{{ url_for('public.cafes') }}"
+                       class="btn btn-dark btn-lg">
+                        Explore cafes
+                    </a>
+
+                    <a href="{{ url_for('public.about') }}"
+                       class="btn btn-outline-dark btn-lg">
+                        About WorkCafe
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="bg-light border rounded-4 p-4 p-lg-5">
+                    <p class="text-secondary small text-uppercase fw-semibold">
+                        THE IDEA
+                    </p>
+                    <h2 class="h3 fw-bold mb-3">
+                        Coffee. Focus. Repeat.
+                    </h2>
+                    <p class="text-secondary mb-0">
+                        A growing guide to Pune cafes worth considering
+                        for your next laptop session. Check each listing
+                        for location, pricing, and available amenities.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured cafes -->
+<section class="py-5 bg-light">
+    <div class="container py-3">
+        <div class="d-flex justify-content-between
+                    align-items-end flex-wrap gap-3 mb-4">
+            <div>
+                <p class="text-success fw-semibold mb-2">
+                    PLACES TO EXPLORE
+                </p>
+                <h2 class="display-6 fw-bold mb-0">
+                    Featured cafes
+                </h2>
+            </div>
+
+            <a href="{{ url_for('public.cafes') }}"
+               class="btn btn-outline-dark">
+                View all cafes →
+            </a>
+        </div>
+
+        {% if cafes %}
+            <div class="row g-4">
+                {% for cafe in cafes %}
+                    <div class="col-md-6 col-lg-4">
+                        <article class="card h-100 border-0 shadow-sm">
+                            {% if cafe.image_filename %}
+                                <img
+                                    src="{{ url_for(
+                                        'static',
+                                        filename='uploads/' ~ cafe.image_filename
+                                    ) }}"
+                                    class="card-img-top"
+                                    alt="{{ cafe.name }}"
+                                    style="height: 220px; object-fit: cover;"
+                                >
+                            {% else %}
+                                <div class="bg-white d-flex align-items-center
+                                            justify-content-center border-bottom"
+                                     style="height: 180px;">
+                                    <span class="text-secondary">
+                                        Photo coming soon
+                                    </span>
+                                </div>
+                            {% endif %}
+
+                            <div class="card-body p-4">
+                                <p class="small text-success fw-semibold mb-2">
+                                    {{ cafe.area.name }}
+                                </p>
+
+                                <h3 class="h5 fw-bold">
+                                    {{ cafe.name }}
+                                </h3>
+
+                                <p class="text-secondary small">
+                                    {{ cafe.address }}
+                                </p>
+
+                                <p class="text-secondary">
+                                    {{ cafe.description | truncate(120) }}
+                                </p>
+
+                                <a href="{{ url_for(
+                                    'public.cafe_detail',
+                                    slug=cafe.slug
+                                ) }}"
+                                   class="btn btn-outline-dark btn-sm">
+                                    View cafe →
+                                </a>
+                            </div>
+                        </article>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white border rounded-4 p-5 text-center">
+                <h3 class="h4 fw-bold">We're brewing the directory.</h3>
+                <p class="text-secondary mb-0">
+                    Cafe listings will appear here once they're published.
+                    Check back soon.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Browse by area -->
+<section class="py-5">
+    <div class="container py-3">
+        <p class="text-success fw-semibold mb-2">EXPLORE PUNE</p>
+        <h2 class="display-6 fw-bold mb-3">Find a spot by area</h2>
+        <p class="text-secondary mb-4">
+            Explore neighbourhoods and discover cafes around the city.
+        </p>
+
+        <a href="{{ url_for('public.cafes') }}"
+           class="btn btn-dark">
+            Browse the cafe directory →
+        </a>
+    </div>
+</section>
+
 {% endblock %}
