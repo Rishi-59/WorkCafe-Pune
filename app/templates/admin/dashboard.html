@@ -130,6 +130,25 @@
                     >
                         Edit
                     </a>
+
+                    <form
+                            method="POST"
+                            action="{{ url_for('admin.toggle_publish', cafe_id=cafe.id) }}"
+                            class="d-inline"
+                    >
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        {% if cafe.published %}
+                        <button type="submit" class="btn btn-outline-warning btn-sm">
+                            Unpublish
+                        </button>
+                        {% else %}
+                        <button type="submit" class="btn btn-success btn-sm">
+                            Publish
+                        </button>
+                        {% endif %}
+                    </form>
+
                 </td>
             </tr>
             {% else %}
