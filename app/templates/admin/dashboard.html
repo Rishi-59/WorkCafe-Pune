@@ -5,14 +5,141 @@
 
 {% block content %}
 <div class="container py-5">
-    <h1>Admin Dashboard</h1>
-    <p>You are logged in as {{ current_user.username }}.</p>
 
-    <form method="POST" action="{{ url_for('admin.logout') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-outline-danger">
-            Log out
-        </button>
-    </form>
+    <!-- Dashboard heading -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">Dashboard</h1>
+            <p class="text-muted mb-0">
+                Welcome back, {{ current_user.username }}.
+            </p>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h4 mb-0">Manage Cafes</h2>
+
+            <a href="{{ url_for('admin.create_cafe') }}"
+               class="btn btn-dark">
+                + Add Cafe
+            </a>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin.logout') }}">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+            <button type="submit" class="btn btn-outline-danger">
+                Log out
+            </button>
+        </form>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-5">
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted mb-2">Total Cafes</p>
+                    <h2 class="mb-0">{{ total_cafes }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted mb-2">Published</p>
+                    <h2 class="mb-0 text-success">
+                        {{ published_cafes }}
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted mb-2">Drafts</p>
+                    <h2 class="mb-0 text-secondary">
+                        {{ draft_cafes }}
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Cafe management table -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Manage Cafes</h2>
+        <span class="text-muted small">
+            {{ total_cafes }} listings
+        </span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Cafe</th>
+                    <th scope="col">Area</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Image</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for cafe in cafes %}
+                <tr>
+                    <td>
+                        <strong>{{ cafe.name }}</strong>
+                        <div class="small text-muted">
+                            {{ cafe.address }}
+                        </div>
+                    </td>
+
+                    <td>{{ cafe.area.name }}</td>
+
+                    <td>
+                        {% if cafe.published %}
+                            <span class="badge text-bg-success">
+                                Published
+                            </span>
+                        {% else %}
+                            <span class="badge text-bg-secondary">
+                                Draft
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if cafe.image_filename %}
+                            <span class="text-success">Uploaded</span>
+                        {% else %}
+                            <span class="text-muted">No image</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <span class="text-muted small">
+                            Editing coming next
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-4">
+                        No cafes found. Add your first listing soon.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
 </div>
 {% endblock %}
