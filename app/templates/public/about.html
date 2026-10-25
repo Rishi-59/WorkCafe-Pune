@@ -1,0 +1,60 @@
+
+{% extends "base.html" %}
+
+{% block title %}About WorkCafe Pune{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <p class="text-success fw-semibold mb-2">OUR STORY</p>
+
+                <h1 class="display-4 fw-bold mb-4">
+                    A better place to work, one cafe at a time.
+                </h1>
+
+                <p class="lead text-secondary mb-5">
+                    WorkCafe Pune is a growing guide to cafes around Pune
+                    that people can explore for work, study, and coffee.
+                </p>
+
+                <h2 class="h3 fw-bold mb-3">Why WorkCafe?</h2>
+                <p class="text-secondary mb-4">
+                    Finding a cafe that suits a laptop session takes more
+                    than finding good coffee. Location, pricing, seating,
+                    Wi-Fi, and power availability can all influence where
+                    you decide to spend your time.
+                </p>
+
+                <h2 class="h3 fw-bold mb-3">What you'll find here</h2>
+                <p class="text-secondary mb-4">
+                    We organise cafe listings by neighbourhood and provide
+                    useful details such as addresses, descriptions, price
+                    levels, and amenity information when available.
+                </p>
+
+                <h2 class="h3 fw-bold mb-3">Honest information matters</h2>
+                <p class="text-secondary mb-4">
+                    We aim to make each listing useful and transparent.
+                    Information that hasn't been confirmed is marked as
+                    unverified instead of being presented as fact. Prices,
+                    amenities, and cafe policies may change, so visitors
+                    should confirm important details before visiting.
+                </p>
+
+                <div class="bg-light rounded-4 p-4 mt-5">
+                    <h2 class="h4 fw-bold">Ready to find your next spot?</h2>
+                    <p class="text-secondary">
+                        Browse the directory and explore cafes across Pune.
+                    </p>
+                    <a href="{{ url_for('public.cafes') }}"
+                       class="btn btn-dark">
+                        Explore cafes →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
