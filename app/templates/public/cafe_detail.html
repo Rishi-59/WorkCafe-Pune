@@ -1,0 +1,98 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ cafe.name }} | WorkCafe Pune{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <a href="{{ url_for('public.cafes') }}"
+           class="text-secondary text-decoration-none">
+            ← Back to all cafes
+        </a>
+
+        <div class="row g-5 mt-2">
+            <div class="col-lg-8">
+                {% if cafe.image_filename %}
+                    <img
+                        src="{{ url_for('static', filename='uploads/' ~ cafe.image_filename) }}"
+                        alt="{{ cafe.name }}"
+                        class="img-fluid rounded-4 w-100 mb-4"
+                        style="max-height: 440px; object-fit: cover;"
+                    >
+                {% else %}
+                    <div class="bg-light rounded-4 d-flex align-items-center justify-content-center mb-4"
+                         style="height: 280px;">
+                        <span class="text-secondary">Cafe photo coming soon</span>
+                    </div>
+                {% endif %}
+
+                <a href="{{ url_for('public.area_detail', area_slug=cafe.area.slug) }}"
+                   class="text-success text-decoration-none fw-semibold">
+                    {{ cafe.area.name }}
+                </a>
+
+                <h1 class="display-5 fw-bold mt-2 mb-3">{{ cafe.name }}</h1>
+
+                <p class="text-secondary mb-4">
+                    {{ cafe.address }}
+                </p>
+
+                <h2 class="h4 fw-bold">About this cafe</h2>
+                <p style="white-space: pre-line;">{{ cafe.description }}</p>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="border rounded-4 p-4">
+                    <h2 class="h5 fw-bold mb-4">At a glance</h2>
+
+                    <div class="mb-4">
+                        <p class="small text-secondary mb-1">Area</p>
+                        <a href="{{ url_for('public.area_detail', area_slug=cafe.area.slug) }}"
+                           class="fw-semibold text-dark">
+                            {{ cafe.area.name }}
+                        </a>
+                    </div>
+
+                    <div class="mb-4">
+                        <p class="small text-secondary mb-1">Price level</p>
+                        <p class="fw-semibold mb-0">
+                            {{ cafe.price_level or "Not specified" }}
+                        </p>
+                    </div>
+
+                    <div class="mb-4">
+                        <p class="small text-secondary mb-1">Wi-Fi</p>
+                        <p class="fw-semibold mb-0">
+                            {% if cafe.wifi_available is none %}
+                                Not verified
+                            {% elif cafe.wifi_available %}
+                                Available
+                            {% else %}
+                                Not available
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p class="small text-secondary mb-1">Power outlets</p>
+                        <p class="fw-semibold mb-0">
+                            {% if cafe.power_outlets is none %}
+                                Not verified
+                            {% elif cafe.power_outlets %}
+                                Available
+                            {% else %}
+                                Not available
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <p class="small text-secondary mt-3">
+                    Amenities and prices can change. Confirm details with the cafe before visiting.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
