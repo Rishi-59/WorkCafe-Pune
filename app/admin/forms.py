@@ -1,5 +1,6 @@
 
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import (
     StringField,
     PasswordField,
@@ -35,6 +36,17 @@ class CafeForm(FlaskForm):
     new_area_name = StringField(
         "New Area Name",
         validators=[Optional(), Length(max=100)],
+    )
+
+    image = FileField(
+        "Cafe Image",
+        validators=[
+            Optional(),
+            FileAllowed(
+                ["jpg", "jpeg", "png", "webp"],
+                "Only JPG, PNG, and WEBP images are allowed.",
+            ),
+        ],
     )
 
     price_level = SelectField(
