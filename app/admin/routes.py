@@ -1,4 +1,7 @@
-from flask import render_template, redirect, url_for, flash
+import os
+from uuid import uuid4
+
+from flask import render_template, redirect, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from slugify import slugify
 
@@ -6,6 +9,55 @@ from app.admin import admin_bp
 from app.admin.forms import AdminLoginForm, CafeForm
 from app.extensions import db
 from app.models import Admin, Cafe, Area
+
+from werkzeug.utils import secure_filename
+
+
+
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+def save_cafe_image(upload):
+    """Save an uploaded image and return its generated filename."""
+    if not upload or not upload.filename:
+        return None
+
+    safe_name = secure_filename(upload.filename)
+    extension = os.path.splitext(safe_name)[1].lower()
+
+    if not safe_name or extension not in ALLOWED_IMAGE_EXTENSIONS:
+        raise ValueError("Unsupported image file type.")
+
+    upload_folder = current_app.config["UPLOAD_FOLDER"]
+    os.makedirs(upload_folder, exist_ok=True)
+
+    filename = f"{uuid4().hex}{extension}"
+    filepath = os.path.join(upload_folder, filename)
+
+    upload.save(filepath)
+
+    return filename
+
+
+def delete_cafe_image(filename):
+    """Delete an old uploaded image if it exists."""
+    if not filename:
+        return
+
+    upload_folder = os.path.abspath(
+        current_app.config["UPLOAD_FOLDER"]
+    )
+    filepath = os.path.abspath(
+        os.path.join(upload_folder, filename)
+    )
+
+    # Ensure the file is inside the configured upload folder.
+    if os.path.commonpath([upload_folder, filepath]) != upload_folder:
+        return
+
+    if os.path.isfile(filepath):
+        os.remove(filepath)
+
 
 
 @admin_bp.route("/login", methods=["GET", "POST"])
@@ -153,6 +205,8 @@ def create_cafe():
                 page_title="Add Cafe",
             )
 
+        image_filename = save_cafe_image(form.image.data)
+
         cafe = Cafe(
             name=name,
             slug=slug,
@@ -161,15 +215,12 @@ def create_cafe():
             area=area,
             price_level=form.price_level.data or None,
             wifi_available={
-                "yes": True,
-                "no": False,
-                "unknown": None,
+                "yes": True, "no": False, "unknown": None
             }[form.wifi_available.data],
             power_outlets={
-                "yes": True,
-                "no": False,
-                "unknown": None,
+                "yes": True, "no": False, "unknown": None
             }[form.power_outlets.data],
+            image_filename=image_filename,
             published=False,
         )
 
@@ -313,8 +364,19 @@ def edit_cafe(cafe_id):
             "unknown": None,
         }[form.power_outlets.data]
 
-        # Do not change cafe.published when editing.
+        old_image_filename = cafe.image_filename
+        new_image_filename = None
+
+        if form.image.data and form.image.data.filename:
+            new_image_filename = save_cafe_image(form.image.data)
+            cafe.image_filename = new_image_filename
+
         db.session.commit()
+
+        # Remove the previous image only after the database update succeeds.
+        if new_image_filename and old_image_filename:
+            delete_cafe_image(old_image_filename)
+
 
         flash(f"{cafe.name} was updated successfully.", "success")
         return redirect(url_for("admin.dashboard"))
