@@ -35,6 +35,11 @@ class Cafe(db.Model):
     power_outlets: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    image_filename: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
     area_id: Mapped[int] = mapped_column(ForeignKey("areas.id"), nullable=False)
     area: Mapped["Area"] = relationship(back_populates="cafes")
 
