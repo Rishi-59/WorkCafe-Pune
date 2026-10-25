@@ -187,3 +187,142 @@ def create_cafe():
     )
 
 
+
+@admin_bp.route("/cafes/<int:cafe_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_cafe(cafe_id):
+    cafe = db.get_or_404(Cafe, cafe_id)
+    form = CafeForm()
+
+    # Populate the dropdown with existing areas.
+    areas = db.session.scalars(
+        db.select(Area).order_by(Area.name)
+    ).all()
+
+    form.area_id.choices = [
+        (area.id, area.name) for area in areas
+    ] + [(-1, "+ Add new area...")]
+
+    # Fill the form with existing cafe data on the first visit.
+    if not form.is_submitted():
+        form.name.data = cafe.name
+        form.address.data = cafe.address
+        form.description.data = cafe.description
+        form.area_id.data = cafe.area_id
+        form.price_level.data = cafe.price_level or ""
+        form.wifi_available.data = (
+            "unknown" if cafe.wifi_available is None
+            else "yes" if cafe.wifi_available
+            else "no"
+        )
+        form.power_outlets.data = (
+            "unknown" if cafe.power_outlets is None
+            else "yes" if cafe.power_outlets
+            else "no"
+        )
+
+    if form.validate_on_submit():
+        name = form.name.data.strip()
+        slug = slugify(name)
+
+        if not slug:
+            form.name.errors.append("Enter a valid cafe name.")
+            return render_template(
+                "admin/cafe_form.html",
+                form=form,
+                page_title="Edit Cafe",
+            )
+
+        # Allow the cafe to keep its own slug, but reject another
+        # cafe with the same generated slug.
+        existing_cafe = db.session.scalar(
+            db.select(Cafe).where(
+                Cafe.slug == slug,
+                Cafe.id != cafe.id,
+            )
+        )
+
+        if existing_cafe:
+            form.name.errors.append(
+                "Another cafe already uses this name or URL slug."
+            )
+            return render_template(
+                "admin/cafe_form.html",
+                form=form,
+                page_title="Edit Cafe",
+            )
+
+        # Resolve the selected area or create a new one.
+        if form.area_id.data == -1:
+            area_name = (form.new_area_name.data or "").strip()
+
+            if not area_name:
+                form.new_area_name.errors.append(
+                    "Enter a name for the new area."
+                )
+                return render_template(
+                    "admin/cafe_form.html",
+                    form=form,
+                    page_title="Edit Cafe",
+                )
+
+            area_slug = slugify(area_name)
+
+            if not area_slug:
+                form.new_area_name.errors.append(
+                    "Enter a valid area name."
+                )
+                return render_template(
+                    "admin/cafe_form.html",
+                    form=form,
+                    page_title="Edit Cafe",
+                )
+
+            area = db.session.scalar(
+                db.select(Area).where(Area.slug == area_slug)
+            )
+
+            if area is None:
+                area = Area(name=area_name, slug=area_slug)
+                db.session.add(area)
+                db.session.flush()
+        else:
+            area = db.session.get(Area, form.area_id.data)
+
+        if area is None:
+            form.area_id.errors.append("Select a valid area.")
+            return render_template(
+                "admin/cafe_form.html",
+                form=form,
+                page_title="Edit Cafe",
+            )
+
+        # Update the existing database object.
+        cafe.name = name
+        cafe.slug = slug
+        cafe.address = form.address.data.strip()
+        cafe.description = form.description.data.strip()
+        cafe.area = area
+        cafe.price_level = form.price_level.data or None
+        cafe.wifi_available = {
+            "yes": True,
+            "no": False,
+            "unknown": None,
+        }[form.wifi_available.data]
+        cafe.power_outlets = {
+            "yes": True,
+            "no": False,
+            "unknown": None,
+        }[form.power_outlets.data]
+
+        # Do not change cafe.published when editing.
+        db.session.commit()
+
+        flash(f"{cafe.name} was updated successfully.", "success")
+        return redirect(url_for("admin.dashboard"))
+
+    return render_template(
+        "admin/cafe_form.html",
+        form=form,
+        page_title="Edit Cafe",
+    )
