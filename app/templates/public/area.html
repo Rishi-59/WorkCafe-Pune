@@ -1,0 +1,72 @@
+
+{% extends "base.html" %}
+
+{% block title %}Work Cafes in {{ area.name }} | WorkCafe Pune{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <a href="{{ url_for('public.cafes') }}"
+           class="text-secondary text-decoration-none">
+            ← Explore all cafes
+        </a>
+
+        <div class="mt-4 mb-5">
+            <p class="text-success fw-semibold mb-2">EXPLORE THE NEIGHBOURHOOD</p>
+            <h1 class="display-5 fw-bold">{{ area.name }}</h1>
+
+            {% if area.description %}
+                <p class="lead text-secondary">{{ area.description }}</p>
+            {% else %}
+                <p class="lead text-secondary">
+                    Explore cafes in {{ area.name }}, Pune, for your next coffee or work session.
+                </p>
+            {% endif %}
+        </div>
+
+        {% if cafes %}
+            <div class="row g-4">
+                {% for cafe in cafes %}
+                    <div class="col-md-6 col-lg-4">
+                        <article class="card h-100 border-0 shadow-sm">
+                            {% if cafe.image_filename %}
+                                <img
+                                    src="{{ url_for('static', filename='uploads/' ~ cafe.image_filename) }}"
+                                    alt="{{ cafe.name }}"
+                                    class="card-img-top"
+                                    style="height: 210px; object-fit: cover;"
+                                >
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center"
+                                     style="height: 180px;">
+                                    <span class="text-secondary">Photo coming soon</span>
+                                </div>
+                            {% endif %}
+
+                            <div class="card-body p-4">
+                                <h2 class="h5 fw-bold">{{ cafe.name }}</h2>
+                                <p class="text-secondary small">{{ cafe.address }}</p>
+                                <p class="text-secondary">
+                                    {{ cafe.description | truncate(120) }}
+                                </p>
+
+                                <a href="{{ url_for('public.cafe_detail', slug=cafe.slug) }}"
+                                   class="btn btn-outline-dark btn-sm">
+                                    View cafe →
+                                </a>
+                            </div>
+                        </article>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="border rounded-4 p-5 text-center">
+                <h2 class="h4 fw-bold">More cafes coming soon.</h2>
+                <p class="text-secondary mb-0">
+                    There are no published listings in this area yet.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
