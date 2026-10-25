@@ -14,7 +14,7 @@ def home():
         .options(joinedload(Cafe.area))
         .where(Cafe.published.is_(True))
         .order_by(Cafe.created_at.desc())
-        .limit(6)
+        .limit(3)
     ).all()
 
     return render_template("public/home.html", cafes=cafes)
