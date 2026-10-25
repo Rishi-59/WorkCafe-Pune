@@ -31,7 +31,7 @@
                         <article class="card h-100 border-0 shadow-sm">
                             {% if cafe.image_filename %}
                                 <img
-                                    src="{{ url_for('static', filename='uploads/' ~ cafe.image_filename) }}"
+                                    src="{{ cafe.image_filename }}"
                                     alt="{{ cafe.name }}"
                                     class="card-img-top"
                                     style="height: 210px; object-fit: cover;"

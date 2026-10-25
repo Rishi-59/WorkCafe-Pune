@@ -15,7 +15,7 @@
             <div class="col-lg-8">
                 {% if cafe.image_filename %}
                     <img
-                        src="{{ url_for('static', filename='uploads/' ~ cafe.image_filename) }}"
+                        src="{{ cafe.image_filename }}"
                         alt="{{ cafe.name }}"
                         class="img-fluid rounded-4 w-100 mb-4"
                         style="max-height: 440px; object-fit: cover;"

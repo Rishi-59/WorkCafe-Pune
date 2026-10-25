@@ -4,6 +4,7 @@ from uuid import uuid4
 from flask import render_template, redirect, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from slugify import slugify
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.admin import admin_bp
 from app.admin.forms import AdminLoginForm, CafeForm
@@ -13,13 +14,29 @@ from app.models import Admin, Cafe, Area
 from werkzeug.utils import secure_filename
 from PIL import Image, UnidentifiedImageError
 
+import logging
+from urllib.parse import unquote, urlparse
+
+from supabase import create_client
+
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
+def get_supabase_storage():
+    """Return the configured Supabase Storage bucket."""
+    supabase_url = current_app.config.get("SUPABASE_URL")
+    secret_key = current_app.config.get("SUPABASE_SECRET_KEY")
+    bucket_name = current_app.config.get("SUPABASE_BUCKET")
+
+    if not supabase_url or not secret_key or not bucket_name:
+        raise RuntimeError("Supabase Storage configuration is missing.")
+
+    client = create_client(supabase_url, secret_key)
+    return client.storage.from_(bucket_name)
+
 
 def save_cafe_image(upload):
-    """Validate and save an uploaded image."""
-
+    """Validate an uploaded image and store it in Supabase Storage."""
     if not upload or not upload.filename:
         return None
 
@@ -27,11 +44,8 @@ def save_cafe_image(upload):
     extension = os.path.splitext(safe_name)[1].lower()
 
     if not safe_name or extension not in ALLOWED_IMAGE_EXTENSIONS:
-        raise ValueError(
-            "Unsupported file type. Use JPG, PNG, or WEBP."
-        )
+        raise ValueError("Unsupported file type. Use JPG, PNG, or WEBP.")
 
-    # Validate the actual file contents, not just its extension.
     try:
         upload.stream.seek(0)
 
@@ -40,50 +54,76 @@ def save_cafe_image(upload):
                 raise ValueError(
                     "The uploaded file must be a JPG, PNG, or WEBP image."
                 )
-
             image.verify()
 
         upload.stream.seek(0)
+        image_bytes = upload.stream.read()
 
+    except ValueError:
+        raise
     except (UnidentifiedImageError, OSError) as error:
-        raise ValueError(
-            "The uploaded file is not a valid image."
-        ) from error
+        raise ValueError("The uploaded file is not a valid image.") from error
 
-    upload_folder = current_app.config["UPLOAD_FOLDER"]
-    os.makedirs(upload_folder, exist_ok=True)
+    content_types = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }
 
     filename = f"{uuid4().hex}{extension}"
-    filepath = os.path.join(upload_folder, filename)
 
     try:
-        upload.save(filepath)
-    except OSError as error:
+        storage = get_supabase_storage()
+
+        storage.upload(
+            filename,
+            image_bytes,
+            file_options={
+                "content-type": content_types[extension],
+                "upsert": "false",
+            },
+        )
+
+        return storage.get_public_url(filename)
+
+    except Exception as error:
+        current_app.logger.exception("Supabase image upload failed.")
         raise ValueError(
-            "The image could not be saved. Please try again."
+            "The image could not be uploaded. Please try again."
         ) from error
 
-    return filename
 
-
-def delete_cafe_image(filename):
-    """Delete an old uploaded image if it exists."""
-    if not filename:
+def delete_cafe_image(image_url):
+    """Delete an image from Supabase Storage using its public URL."""
+    if not image_url:
         return
 
-    upload_folder = os.path.abspath(
-        current_app.config["UPLOAD_FOLDER"]
-    )
-    filepath = os.path.abspath(
-        os.path.join(upload_folder, filename)
+    bucket_name = current_app.config.get("SUPABASE_BUCKET")
+    parsed_url = urlparse(image_url)
+
+    expected_prefix = (
+        f"/storage/v1/object/public/{bucket_name}/"
     )
 
-    # Ensure the file is inside the configured upload folder.
-    if os.path.commonpath([upload_folder, filepath]) != upload_folder:
+    if not bucket_name or not parsed_url.path.startswith(expected_prefix):
+        # Ignore old local filenames or URLs that aren't from this bucket.
         return
 
-    if os.path.isfile(filepath):
-        os.remove(filepath)
+    object_path = unquote(parsed_url.path[len(expected_prefix):])
+
+    if not object_path:
+        return
+
+    try:
+        storage = get_supabase_storage()
+        storage.remove([object_path])
+    except Exception:
+        # Don't make a successful database update appear to have failed
+        # just because an old image couldn't be deleted.
+        current_app.logger.exception(
+            "Could not delete image from Supabase Storage."
+        )
 
 
 @admin_bp.route("/login", methods=["GET", "POST"])
@@ -259,7 +299,24 @@ def create_cafe():
         )
 
         db.session.add(cafe)
-        db.session.commit()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+
+            # Remove the uploaded image if the database save failed.
+            if image_filename:
+                delete_cafe_image(image_filename)
+
+            current_app.logger.exception("Could not create cafe.")
+            flash("Could not save the cafe. Please try again.", "danger")
+
+            return render_template(
+                "admin/cafe_form.html",
+                form=form,
+                page_title="Add Cafe",
+            )
 
         flash(f"{cafe.name} was saved as a draft.", "success")
         return redirect(url_for("admin.dashboard"))
@@ -269,7 +326,6 @@ def create_cafe():
         form=form,
         page_title="Add Cafe",
     )
-
 
 
 @admin_bp.route("/cafes/<int:cafe_id>/edit", methods=["GET", "POST"])
@@ -284,8 +340,8 @@ def edit_cafe(cafe_id):
     ).all()
 
     form.area_id.choices = [
-        (area.id, area.name) for area in areas
-    ] + [(-1, "+ Add new area...")]
+                               (area.id, area.name) for area in areas
+                           ] + [(-1, "+ Add new area...")]
 
     # Populate fields only on the initial GET request.
     if not form.is_submitted():
@@ -474,7 +530,6 @@ def edit_cafe(cafe_id):
         cafe=cafe,
         page_title="Edit Cafe",
     )
-
 
 
 @admin_bp.route(

@@ -91,10 +91,7 @@
 
             <div>
                 <img
-                        src="{{ url_for(
-                    'static',
-                    filename='uploads/' ~ cafe.image_filename
-                ) }}"
+                        src="{{ cafe.image_filename }}"
                         alt="{{ cafe.name }}"
                         class="img-thumbnail"
                         style="max-width: 500px;"
