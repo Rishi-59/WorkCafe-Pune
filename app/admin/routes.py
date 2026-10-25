@@ -1,4 +1,3 @@
-
 from flask import render_template, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from slugify import slugify
@@ -6,7 +5,7 @@ from slugify import slugify
 from app.admin import admin_bp
 from app.admin.forms import AdminLoginForm, CafeForm
 from app.extensions import db
-from app.models import Admin , Cafe , Area
+from app.models import Admin, Cafe, Area
 
 
 @admin_bp.route("/login", methods=["GET", "POST"])
@@ -73,8 +72,8 @@ def create_cafe():
 
     # -1 is a special value meaning "create a new area".
     form.area_id.choices = [
-        (area.id, area.name) for area in areas
-    ] + [(-1, "+ Add new area...")]
+                               (area.id, area.name) for area in areas
+                           ] + [(-1, "+ Add new area...")]
 
     if form.validate_on_submit():
         name = form.name.data.strip()
@@ -187,7 +186,6 @@ def create_cafe():
     )
 
 
-
 @admin_bp.route("/cafes/<int:cafe_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_cafe(cafe_id):
@@ -200,8 +198,8 @@ def edit_cafe(cafe_id):
     ).all()
 
     form.area_id.choices = [
-        (area.id, area.name) for area in areas
-    ] + [(-1, "+ Add new area...")]
+                               (area.id, area.name) for area in areas
+                           ] + [(-1, "+ Add new area...")]
 
     # Fill the form with existing cafe data on the first visit.
     if not form.is_submitted():
@@ -326,3 +324,22 @@ def edit_cafe(cafe_id):
         form=form,
         page_title="Edit Cafe",
     )
+
+
+@admin_bp.route(
+    "/cafes/<int:cafe_id>/toggle-publish",
+    methods=["POST"],
+)
+@login_required
+def toggle_publish(cafe_id):
+    cafe = db.get_or_404(Cafe, cafe_id)
+
+    cafe.published = not cafe.published
+    db.session.commit()
+
+    if cafe.published:
+        flash(f"{cafe.name} is now published.", "success")
+    else:
+        flash(f"{cafe.name} has been unpublished.", "info")
+
+    return redirect(url_for("admin.dashboard"))
