@@ -11,14 +11,15 @@ from app.extensions import db
 from app.models import Admin, Cafe, Area
 
 from werkzeug.utils import secure_filename
-
-
+from PIL import Image, UnidentifiedImageError
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
+
 def save_cafe_image(upload):
-    """Save an uploaded image and return its generated filename."""
+    """Validate and save an uploaded image."""
+
     if not upload or not upload.filename:
         return None
 
@@ -26,7 +27,28 @@ def save_cafe_image(upload):
     extension = os.path.splitext(safe_name)[1].lower()
 
     if not safe_name or extension not in ALLOWED_IMAGE_EXTENSIONS:
-        raise ValueError("Unsupported image file type.")
+        raise ValueError(
+            "Unsupported file type. Use JPG, PNG, or WEBP."
+        )
+
+    # Validate the actual file contents, not just its extension.
+    try:
+        upload.stream.seek(0)
+
+        with Image.open(upload.stream) as image:
+            if image.format not in {"JPEG", "PNG", "WEBP"}:
+                raise ValueError(
+                    "The uploaded file must be a JPG, PNG, or WEBP image."
+                )
+
+            image.verify()
+
+        upload.stream.seek(0)
+
+    except (UnidentifiedImageError, OSError) as error:
+        raise ValueError(
+            "The uploaded file is not a valid image."
+        ) from error
 
     upload_folder = current_app.config["UPLOAD_FOLDER"]
     os.makedirs(upload_folder, exist_ok=True)
@@ -34,7 +56,12 @@ def save_cafe_image(upload):
     filename = f"{uuid4().hex}{extension}"
     filepath = os.path.join(upload_folder, filename)
 
-    upload.save(filepath)
+    try:
+        upload.save(filepath)
+    except OSError as error:
+        raise ValueError(
+            "The image could not be saved. Please try again."
+        ) from error
 
     return filename
 
@@ -57,7 +84,6 @@ def delete_cafe_image(filename):
 
     if os.path.isfile(filepath):
         os.remove(filepath)
-
 
 
 @admin_bp.route("/login", methods=["GET", "POST"])
