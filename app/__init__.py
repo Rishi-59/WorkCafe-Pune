@@ -2,10 +2,8 @@
 import os
 
 from flask import Flask
-
 from config import Config
-from app.extensions import db, migrate
-
+from app.extensions import db, migrate, login_manager
 
 
 def create_app(config_class=Config):
@@ -20,9 +18,22 @@ def create_app(config_class=Config):
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    login_manager.init_app(app)
+
+    # Configure Flask-Login
+    login_manager.login_view = "admin.login"
+    login_manager.login_message_category = "warning"
 
     # Import models so SQLAlchemy registers the tables
     from app import models
+
+    # Load an admin from their ID stored in the session
+    @login_manager.user_loader
+    def load_user(user_id):
+        if not user_id.isdigit():
+            return None
+
+        return db.session.get(models.Admin, int(user_id))
 
     # Register blueprints
     from app.public import public_bp
