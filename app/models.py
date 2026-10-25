@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.extensions import db
+from flask_login import UserMixin
 
 
 # CONFIGURE TABLES
@@ -50,7 +51,7 @@ class Cafe(db.Model):
     )
 
 
-class Admin(db.Model):
+class Admin(UserMixin, db.Model):
     __tablename__ = "admins"
 
     id: Mapped[int] = mapped_column(primary_key=True)
